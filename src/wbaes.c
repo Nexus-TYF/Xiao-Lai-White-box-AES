@@ -1,9 +1,5 @@
 #include "wbaes.h"
 
-u32 TMC[10][8][65536];
-M128 M[11];
-M128 ex_in, ex_out_inv;
-
 M128 shiftrows_matrix = {
     .M[0][0] = 0x8000000000000000,
     .M[1][0] = 0x4000000000000000,
@@ -412,7 +408,6 @@ void wbaes_encrypt (u8 input[16], u8 output[16])
         *(temp_u8 + (15 - i)) = input[i];
     }
 
-    MatMulVecM128(ex_in, state_M, &state_M);//external encoding
     for(int r = 0; r < 10; r++)
     {
         MatMulVecM128(M[r], state_M, &state_M);//matrix M
@@ -445,7 +440,6 @@ void wbaes_encrypt (u8 input[16], u8 output[16])
         }
     }
     MatMulVecM128(M[10], state_M, &state_M);
-    MatMulVecM128(ex_out_inv, state_M, &state_M);//external encoding
 
     for(int i = 0; i < 8; i++)
     {
