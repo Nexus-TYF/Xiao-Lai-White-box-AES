@@ -261,7 +261,8 @@ M128 shiftrows_matrix = {
 
 void printstate(unsigned char * in)
 {
-    for(int i = 0; i < 16; i++) 
+    int i;
+    for(i = 0; i < 16; i++) 
     {
         printf("%.2X", in[i]);
     }
@@ -270,6 +271,7 @@ void printstate(unsigned char * in)
 
 void wbaes_gen(u8 key[16])
 {
+    int i, j, x;
     u8 expandedKey[176];
     expandKey (key, expandedKey);
     
@@ -284,16 +286,16 @@ void wbaes_gen(u8 key[16])
     M128 ex_out;
     M128 ex_in_inv;
 
-    for(int i = 0; i < 10; i++)
+    for(i = 0; i < 10; i++)
     {
-        for(int j = 0; j < 8; j++)
+        for(j = 0; j < 8; j++)
         {
             genMatpairM16(&L[i][j], &L_inv[i][j]);
         }
     }
-    for(int i = 0; i < 10; i++)
+    for(i = 0; i < 10; i++)
     {
-        for(int j = 0; j < 4; j++)
+        for(j = 0; j < 4; j++)
         {
             genMatpairM32(&R[i][j], &R_inv[i][j]);
         }
@@ -301,11 +303,11 @@ void wbaes_gen(u8 key[16])
     genMatpairM128(&ex_in, &ex_in_inv);
     genMatpairM128(&ex_out, &ex_out_inv);
 
-    for(int i = 0; i < 10; i++)
+    for(i = 0; i < 10; i++)
     {
         MatrixcomM16to128(L[i][0], L[i][1], L[i][2], L[i][3], L[i][4], L[i][5], L[i][6], L[i][7], &M_L[i]);
     }
-    for(int i = 0; i < 10; i++)
+    for(i = 0; i < 10; i++)
     {
         MatrixcomM32to128(R_inv[i][0], R_inv[i][1], R_inv[i][2], R_inv[i][3], &M_R_inv[i]);
     }
@@ -316,7 +318,7 @@ void wbaes_gen(u8 key[16])
     MatMulMatM128(M_L[0], temp_m128, &M[0]);
 
     //M 2-10
-    for(int i = 0; i < 9; i++)
+    for(i = 0; i < 9; i++)
     {
         MatMulMatM128(shiftrows_matrix, M_R_inv[i], &temp_m128);
         MatMulMatM128(M_L[i + 1], temp_m128, &M[i + 1]);
@@ -326,7 +328,7 @@ void wbaes_gen(u8 key[16])
     MatMulMatM128(ex_out, M_R_inv[9], &M[10]);
 
     u32 Tyi[4][256];
-    for (int x = 0; x < 256; x++)
+    for (x = 0; x < 256; x++)
     {
         Tyi[0][x] = (gMul(2, x) << 24) | (x << 16) | (x << 8) | gMul(3, x);
         Tyi[1][x] = (gMul(3, x) << 24) | (gMul(2, x) << 16) | (x << 8) | x;
@@ -336,15 +338,15 @@ void wbaes_gen(u8 key[16])
 
     int columnindex[]={0, 0, 1, 1, 2, 2, 3, 3};
     //Round 1-9 LUT
-    for(int i = 0; i < 9; i++)
+    for(i = 0; i < 9; i++)
     {
         shiftRows(expandedKey + 16 * i);
-        for(int j = 0; j < 8; j++)
+        for(j = 0; j < 8; j++)
         {
             u16 temp_u16;
             u8 temp_u8_1, temp_u8_2;
             u32 temp_u32_1, temp_u32_2, temp_u32;
-            for(int x = 0; x < 65536; x++)
+            for(x = 0; x < 65536; x++)
             {
                 temp_u16 = MatMulNumM16(L_inv[i][j], x);
                 temp_u8_1 = (temp_u16 >> 8) & 0xff;
@@ -361,12 +363,12 @@ void wbaes_gen(u8 key[16])
 
     //Round 10 LUT
     shiftRows(expandedKey + 16 * 9);
-    for(int j = 0; j < 8; j++)
+    for(j = 0; j < 8; j++)
     {
         u16 temp_u16;
         u8 temp_u8_1, temp_u8_2;
         u32 temp_u32;
-        for(int x = 0; x < 65536; x++)
+        for(x = 0; x < 65536; x++)
         {
             temp_u16 = MatMulNumM16(L_inv[9][j], x);
             temp_u8_1 = temp_u16 >> 8;
@@ -391,49 +393,50 @@ void wbaes_gen(u8 key[16])
 
 void wbaes_encrypt (u8 input[16], u8 output[16])
 {
+    int i, r;
     V128 state_M;
     u16 state_TMC_in[8];
     u32 state_TMC_out[4];
     u8 *temp_u8;
     u16 *temp_u16;
     u32 *temp_u32;
-    for(int i = 0; i < 8; i++)
+    for(i = 0; i < 8; i++)
     {
         temp_u8 = (u8 *)&state_M.V[0];
         *(temp_u8 + (7 - i)) = input[i];
     }
-    for(int i = 8; i < 16; i++)
+    for(i = 8; i < 16; i++)
     {
         temp_u8 = (u8 *)&state_M.V[1];
         *(temp_u8 + (15 - i)) = input[i];
     }
 
-    for(int r = 0; r < 10; r++)
+    for(r = 0; r < 10; r++)
     {
         MatMulVecM128(M[r], state_M, &state_M);//matrix M
 
-        for(int i = 0; i < 4; i++)
+        for(i = 0; i < 4; i++)
         {
             temp_u16 = (u16 *)&state_M.V[0];
             state_TMC_in[i] = *(temp_u16 + (3 - i));
         }
-        for(int i = 4; i < 8; i++)
+        for(i = 4; i < 8; i++)
         {
             temp_u16 = (u16 *)&state_M.V[1];
             state_TMC_in[i] = *(temp_u16 + (7 - i));
         }
 
-        for(int i = 0; i < 4; i++)//TMC lookup table
+        for(i = 0; i < 4; i++)//TMC lookup table
         {
             state_TMC_out[i] = TMC[r][2 * i][state_TMC_in[2 * i]] ^ TMC[r][(2 * i + 1)][state_TMC_in[(2 * i + 1)]];
         }
 
-        for(int i = 0; i < 2; i++)
+        for(i = 0; i < 2; i++)
         {
             temp_u32 = (u32 *)&state_M.V[0];
             *(temp_u32 + (1 - i)) = state_TMC_out[i];
         }
-        for(int i = 2; i < 4; i++)
+        for(i = 2; i < 4; i++)
         {
             temp_u32 = (u32 *)&state_M.V[1];
             *(temp_u32 + (3 - i)) = state_TMC_out[i];
@@ -441,12 +444,12 @@ void wbaes_encrypt (u8 input[16], u8 output[16])
     }
     MatMulVecM128(M[10], state_M, &state_M);
 
-    for(int i = 0; i < 8; i++)
+    for(i = 0; i < 8; i++)
     {
         temp_u8 = (u8 *)&state_M.V[0];
         output[i] = *(temp_u8 + (7 - i));
     }
-    for(int i = 8; i < 16; i++)
+    for(i = 8; i < 16; i++)
     {
         temp_u8 = (u8 *)&state_M.V[1];
         output[i] = *(temp_u8 + (15 - i));
